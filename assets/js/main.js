@@ -4,6 +4,7 @@ import {
   FilesetResolver,
   DrawingUtils
 } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
+import { FILTERS, drawFilter } from './filters.js';
 
 // ─── State ───────────────────────────────────────────────────────
 const layers = {
@@ -11,6 +12,7 @@ const layers = {
   landmarks: false, blend: false, obj: true, label: true
 };
 let mode = 'both';
+let activeFilter = 'none';
 
 // ─── Color palette ────────────────────────────────────────────────
 const CLASS_COLORS = [
@@ -46,11 +48,11 @@ const bsCard      = document.getElementById('bsCard');
 
 let frameCount = 0, lastFpsTime = performance.now();
 
-// ─── Public API (called from HTML onclick) ────────────────────────
+// ─── Public API ───────────────────────────────────────────────────
 window.toggle = (k) => {
   layers[k] = !layers[k];
-  const id = 'chip' + k.charAt(0).toUpperCase() + k.slice(1);
-  document.getElementById(id).classList.toggle('active', layers[k]);
+  document.getElementById('chip' + k.charAt(0).toUpperCase() + k.slice(1))
+    .classList.toggle('active', layers[k]);
   if (k === 'blend') bsCard.style.display = layers.blend ? 'block' : 'none';
 };
 
@@ -60,6 +62,25 @@ window.setMode = (m) => {
     t.classList.toggle('active', t.dataset.mode === m)
   );
 };
+
+window.setFilter = (id) => {
+  activeFilter = id;
+  document.querySelectorAll('.filter-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.filter === id)
+  );
+};
+
+function buildFilterStrip() {
+  const strip = document.getElementById('filterStrip');
+  FILTERS.forEach(f => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn' + (f.id === 'none' ? ' active' : '');
+    btn.dataset.filter = f.id;
+    btn.innerHTML = `<span class="filter-emoji">${f.emoji}</span><span class="filter-name">${f.label}</span>`;
+    btn.onclick = () => window.setFilter(f.id);
+    strip.appendChild(btn);
+  });
+}
 
 // ─── Init ─────────────────────────────────────────────────────────
 async function init() {
@@ -110,8 +131,9 @@ async function init() {
   statusDot.classList.remove('loading');
   statusDot.classList.add('live');
   statusText.textContent = 'กำลังทำงาน';
+  buildFilterStrip();
 
-  // ─── Render loop ────────────────────────────────────────────────
+  // ─── Render loop ──────────────────────────────────────────────
   let lastVideoTime = -1;
 
   function renderLoop() {
@@ -122,36 +144,32 @@ async function init() {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Face detection
-    let faceResults = null;
-    let faceMs = '—';
+    let faceResults = null, faceMs = '—';
     if (mode !== 'object') {
       const t0 = performance.now();
       faceResults = faceLandmarker.detectForVideo(video, now);
       faceMs = (performance.now() - t0).toFixed(1) + ' ms';
     }
 
-    // Object detection
-    let objResults = null;
-    let objMs = '—';
+    let objResults = null, objMs = '—';
     if (mode !== 'face') {
       const t1 = performance.now();
       objResults = objectDetector.detectForVideo(video, now);
       objMs = (performance.now() - t1).toFixed(1) + ' ms';
     }
 
-    // Draw faces
     const nFace = faceResults?.faceLandmarks?.length ?? 0;
     for (let i = 0; i < nFace; i++) {
       drawFace(drawUtils, faceResults, i);
+      if (activeFilter !== 'none') {
+        drawFilter(ctx, faceResults.faceLandmarks[i], canvas.width, canvas.height, activeFilter);
+      }
     }
 
-    // Draw objects
     const detections = objResults?.detections ?? [];
     if (layers.obj) drawDetections(detections);
     updateObjList(detections);
 
-    // Stats update
     frameCount++;
     if (now - lastFpsTime >= 600) {
       const fps = Math.round(frameCount * 1000 / (now - lastFpsTime));
@@ -167,7 +185,7 @@ async function init() {
 
   renderLoop();
 
-  // ─── Draw helpers ───────────────────────────────────────────────
+  // ─── Draw helpers ────────────────────────────────────────────
   function drawFace(drawUtils, faceResults, i) {
     const lm = faceResults.faceLandmarks[i];
 
@@ -233,7 +251,6 @@ async function init() {
       const color = getClassColor(label);
       const { originX: x, originY: y, width: w, height: h } = det.boundingBox;
 
-      // Bounding box
       ctx.strokeStyle = color;
       ctx.lineWidth   = 2.5;
       ctx.lineJoin    = 'round';
@@ -251,17 +268,13 @@ async function init() {
       const bh    = fsize + pad * 2;
       const by    = y - bh < 0 ? y : y - bh;
 
-      // Canvas has CSS scaleX(-1) → double-flip so text reads correctly.
-      // Anchor label at canvas right edge of box (= visual left after mirror).
       ctx.save();
       ctx.scale(-1, 1);
       ctx.translate(-canvas.width, 0);
       const lx = canvas.width - (x + w);
-
       ctx.fillStyle = color;
       roundRect(ctx, lx, by, tw + pad * 2, bh, 5);
       ctx.fill();
-
       ctx.fillStyle = '#fff';
       ctx.fillText(text, lx + pad, by + fsize + pad * 0.7);
       ctx.restore();
