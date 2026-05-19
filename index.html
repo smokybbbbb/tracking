@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Face &amp; Object Tracking</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600&family=Noto+Sans+Thai:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">กำลังโหลดโมเดล...</div>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+    </div>
+    <div>
+      <div class="brand-title">Vision Tracker</div>
+      <div class="subtitle">Face &amp; Object Detection</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-mode="both"   onclick="setMode('both')">ทั้งหมด</button>
+    <button class="tab"        data-mode="face"   onclick="setMode('face')">ใบหน้า</button>
+    <button class="tab"        data-mode="object" onclick="setMode('object')">สิ่งของ</button>
+  </div>
+</header>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Video -->
+  <div class="video-card">
+    <div class="video-wrap">
+      <video id="video" autoplay playsinline muted></video>
+      <canvas id="canvas"></canvas>
+      <div class="status-badge">
+        <div class="status-dot loading" id="statusDot"></div>
+        <span id="statusText">กำลังเริ่มต้น...</span>
+      </div>
+    </div>
+    <div class="video-controls">
+      <span class="layer-label">ใบหน้า:</span>
+      <button class="chip active" id="chipMesh"      onclick="toggle('mesh')">Mesh</button>
+      <button class="chip active" id="chipContours"  onclick="toggle('contours')">Contours</button>
+      <button class="chip active" id="chipIris"      onclick="toggle('iris')">Iris</button>
+      <button class="chip"        id="chipLandmarks" onclick="toggle('landmarks')">Landmarks</button>
+      <button class="chip"        id="chipBlend"     onclick="toggle('blend')">Blendshapes</button>
+      <span class="layer-label" style="margin-left:6px">สิ่งของ:</span>
+      <button class="chip obj active" id="chipObj"   onclick="toggle('obj')">Bounding Box</button>
+      <button class="chip obj active" id="chipLabel" onclick="toggle('label')">Label</button>
+    </div>
+  </div>
+
+  <!-- Side panel -->
+  <div class="side-panel">
+
+    <div class="card">
+      <div class="card-title">สถิติ</div>
+      <div class="stat-row">
+        <span class="stat-label">FPS</span>
+        <span class="stat-value" id="fps">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">ใบหน้า</span>
+        <span class="stat-value blue" id="faceCount">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Inference (Face)</span>
+        <span class="stat-value" id="faceInfer">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">สิ่งของ</span>
+        <span class="stat-value green" id="objCount">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Inference (Object)</span>
+        <span class="stat-value" id="objInfer">—</span>
+      </div>
+    </div>
+
+    <div class="card" id="objCard">
+      <div class="card-title">สิ่งของที่พบ</div>
+      <div id="objList"><div class="empty">ยังไม่พบสิ่งของ</div></div>
+    </div>
+
+    <div class="card" id="bsCard" style="display:none">
+      <div class="card-title">Blendshapes (ใบหน้า 1)</div>
+      <div id="bsContainer"><div class="empty">รอข้อมูล...</div></div>
+    </div>
+
+  </div>
+</div>
+
+<script type="module" src="assets/js/main.js"></script>
+</body>
+</html>
